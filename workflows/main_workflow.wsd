@@ -1,0 +1,42 @@
+title mHERO: RapidPRO and iHRIS Liberia Integration
+
+participant iHRIS Liberia
+note over iHRIS Liberia: Source of:\nHW data
+participant DHIS2 Liberia
+note over DHIS2 Liberia: Source of:\nFacility, Geo-admin meta-data
+
+participant ILR
+
+note over ILR: CSD Compliant\InterLinked Registry
+participant Sync Coordinator
+note over Sync Coordinator: cron job runs script in node.js Interoperability Layer\nhttps://wiki.ohie.org/display/SUB/OpenHIE+Interoperability+Layer+design+document
+
+participant RapidPRO
+ 
+loop periodic Synchronization
+
+ILR->DHIS2 Liberia: Updated HW info\nCSD Query for Updated Services Transaction [ITI-74] 
+
+
+ILR->iHRIS Liberia: Updated HW info\nCSD Query for Updated Services Transaction [ITI-74] 
+
+ILR->ILR: merge source directory data
+end
+
+loop periodic synchronization
+Sync Coordinator->ILR: GET request for list of new/updated\ncontacts/HWs\n(FHIR API - ATOM feed of JSON)\nhttp://www.hl7.org/implement/standards/fhir/practitioner-examples.html
+ILR->ILR: map GET variables to\nCSD Provider Search </requestParams>
+ILR->ILR: Exeute required CSD Provider Search Query
+ILR->ILR: transform results in ATOM feed\ncontent is JSON content to:\nhttp://www.hl7.org/implement/standards/fhir/json.html 
+
+ILR->Sync Coordinator: GET response
+Sync Coordinator->Sync Coordinator:  Transform incoming JSON\nfrom FHIR Response to TextIT Request\nfor update contacts\n(IL Adapter)
+note over Sync Coordinator: Is following an ATOM feed good enough?\nthere is a chance that the feed could be\npaged when new HWs are added\ncausing some skipping
+Sync Coordinator->RapidPRO: add/update contacts/HWs\nTextIt API\nhttps://textit.in/api/v1/contacts\nhttps://textit.in/api/v1/runs
+
+opt loop over each new/updated contact
+note over Sync Coordinator: How are new Flows run initiated\nfor updated (but not new) contacts?\nWhat if the phone number changed?\nHow do we know what flows should be initiated?\nPerhaps this is a manual process\n(IL Orchestrator)
+Sync Coordinator->RapidPRO: Run Flow 
+end
+
+end 
